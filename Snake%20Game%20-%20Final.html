@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;display:flex;justify-content:center;align-items:center;
+  font-family:Segoe UI,Arial,sans-serif;color:#49394f;
+  background:radial-gradient(circle at 10% 10%,#ffe4f1,transparent 35%),
+             radial-gradient(circle at 90% 90%,#d9f7ff,transparent 35%),
+             linear-gradient(135deg,#fff7fb,#eefcff);
+}
+.game-wrapper{width:min(95%,520px);padding:20px}
+.card{
+  padding:24px;border-radius:30px;background:rgba(255,255,255,.82);
+  backdrop-filter:blur(18px);box-shadow:0 20px 60px rgba(102,77,120,.15);
+  border:2px solid rgba(255,255,255,.9)
+}
+h1{text-align:center;font-size:2.1rem;margin-bottom:4px}
+.subtitle{text-align:center;color:#9a849d;font-size:.9rem;margin-bottom:18px}
+.stats{display:flex;gap:10px;margin-bottom:16px}
+.stat{flex:1;text-align:center;padding:11px;border-radius:17px;background:#fff;box-shadow:0 6px 20px rgba(120,90,130,.08)}
+.label{display:block;font-size:.68rem;color:#a58ea7;text-transform:uppercase;letter-spacing:1px}
+.value{font-size:1.2rem;font-weight:800;color:#59415e}
+.board-wrap{position:relative;width:100%;aspect-ratio:1;border-radius:23px;overflow:hidden;background:#f8fff9;box-shadow:inset 0 0 0 2px rgba(118,190,143,.15)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.overlay{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  flex-direction:column;background:rgba(255,250,253,.9);backdrop-filter:blur(5px);text-align:center
+}
+.overlay.show{display:flex}
+.big{font-size:3.4rem}
+.overlay h2{font-size:1.8rem}
+.overlay p{color:#967e99;margin:5px 0 16px}
+button{border:0;font:inherit;cursor:pointer;user-select:none}
+.restart{
+  padding:12px 24px;border-radius:15px;color:#fff;font-weight:800;
+  background:linear-gradient(135deg,#ff8fbd,#ff70a9);
+  box-shadow:0 8px 20px rgba(255,112,169,.25)
+}
+.restart:hover{transform:translateY(-2px)}
+.controls{margin-top:18px;display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,58px);gap:9px;justify-content:center}
+.ctrl{
+  width:58px;height:58px;border-radius:18px;background:#fff;color:#705475;
+  font-size:1.35rem;font-weight:800;border:2px solid #f8edf7;
+  box-shadow:0 7px 18px rgba(90,60,100,.1)
+}
+.ctrl:active{transform:scale(.92);background:#fff2f8}
+.up{grid-column:2}.left{grid-column:1;grid-row:2}.down{grid-column:2;grid-row:2}.right{grid-column:3;grid-row:2}
+.help{text-align:center;margin-top:15px;color:#a48da6;font-size:.77rem}
+.footer{text-align:center;margin-top:12px;color:#b29eb4;font-size:.72rem}
+@media(max-width:430px){
+ .card{padding:17px;border-radius:25px}h1{font-size:1.75rem}
+ .ctrl{width:53px;height:53px}.controls{grid-template-columns:repeat(3,53px);grid-template-rows:repeat(2,53px)}
+}
+
+/* Mobile-friendly enhancements */
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.game-container, .container, .game-card, .card {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  touch-action: none;
+}
+button {
+  min-width: 48px;
+  min-height: 48px;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+  .game-container, .container, .game-card, .card {
+    width: 100%;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .board-wrap {
+    width: 100%;
+    height: min(92vw, 420px);
+    aspect-ratio: 1 / 1;
+  }
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .controls {
+    gap: 8px;
+  }
+  .controls button, .dpad button {
+    width: 58px;
+    height: 58px;
+    font-size: 22px;
+  }
+  .stats {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 380px) {
+  .controls button, .dpad button {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+</style>
+</head>
+<body>
+<div class="game-wrapper">
+<div class="card">
+<h1>Snake Game</h1>
+<p class="subtitle">Eat the apple and grow your snake!</p>
+
+<div class="stats">
+  <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
+  <div class="stat"><span class="label">Best</span><span class="value" id="best">0</span></div>
+  <div class="stat"><span class="label">Level</span><span class="value" id="level">1</span></div>
+</div>
+
+<div class="board-wrap" style="touch-action:none;">
+<canvas id="game"></canvas>
+<div class="overlay" id="overlay">
+  <div class="big">🥺</div>
+  <h2>Game Over!</h2>
+  <p>Your score: <b id="final">0</b></p>
+  <button class="restart" id="restart">🔄 Play Again</button>
+</div>
+</div>
+
+<div class="controls">
+<button class="ctrl up" data-dir="up">▲</button>
+<button class="ctrl left" data-dir="left">◀</button>
+<button class="ctrl down" data-dir="down">▼</button>
+<button class="ctrl right" data-dir="right">▶</button>
+</div>
+
+<p class="help">Use the buttons or Arrow Keys / WASD</p>
+<div class="footer">© 2026 Snake Game • All Rights Reserved</div>
+</div>
+</div>
+
+<script>
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),
+levelEl=document.getElementById("level"),overlay=document.getElementById("overlay"),
+finalEl=document.getElementById("final"),restart=document.getElementById("restart");
+const N=20; let cell,snake,food,dir,next,score,level,speed,timer,running;
+
+let best=Number(localStorage.getItem("snakeGameBest")||0);
+bestEl.textContent=best;
+
+function resize(){
+  const rect=canvas.getBoundingClientRect();
+  const s=Math.max(1,Math.floor(Math.min(rect.width,rect.height)));
+  const d=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.floor(s*d);
+  canvas.height=Math.floor(s*d);
+  ctx.setTransform(d,0,0,d,0,0);
+  cell=s/N;
+  if(snake && food) draw();
+}
+function start(){
+  snake=[{x:10,y:10},{x:9,y:10}];
+  dir={x:1,y:0};next={x:1,y:0};score=1;level=1;speed=230;running=true;
+  scoreEl.textContent=1;levelEl.textContent=1;overlay.classList.remove("show");
+  placeFood();clearTimeout(timer);timer=setTimeout(tick,speed);draw();
+}
+function placeFood(){
+  const free=[];
+  for(let y=0;y<N;y++){
+    for(let x=0;x<N;x++){
+      if(!snake.some(s=>s.x===x&&s.y===y)) free.push({x,y});
+    }
+  }
+  food=free[Math.floor(Math.random()*free.length)];
+}
+function change(d){
+  if(!running)return;
+  if(d.x===-dir.x&&d.y===-dir.y)return;
+  next=d;
+}
+function tick(){
+  if(!running)return;
+  update();
+  if(running) timer=setTimeout(tick,speed);
+}
+function update(){
+  if(!running)return;
+  dir=next;
+  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  if(head.x<0||head.x>=N||head.y<0||head.y>=N||
+     snake.some(s=>s.x===head.x&&s.y===head.y)){gameOver();return}
+  snake.unshift(head);
+  if(head.x===food.x&&head.y===food.y){
+    score++;scoreEl.textContent=score;
+    if(score>best){best=score;bestEl.textContent=best;localStorage.setItem("snakeGameBest",best)}
+    const nl=Math.floor((score-1)/5)+1;
+    if(nl!==level){level=nl;levelEl.textContent=level;speed=Math.max(105,230-(level-1)*18);clearTimeout(timer);timer=setTimeout(tick,speed)}
+    placeFood();
+  }else snake.pop();
+  draw();
+}
+function gameOver(){
+  running=false;clearTimeout(timer);finalEl.textContent=score;overlay.classList.add("show");
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();
+}
+function draw(){
+  const s=canvas.clientWidth;ctx.clearRect(0,0,s,s);ctx.fillStyle="#f8fff9";ctx.fillRect(0,0,s,s);
+  ctx.strokeStyle="rgba(120,190,140,.09)";
+  for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*cell,0);ctx.lineTo(i*cell,s);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*cell);ctx.lineTo(s,i*cell);ctx.stroke()}
+  snake?.forEach((p,i)=>{
+    const pad=2.5,x=p.x*cell+pad,y=p.y*cell+pad,w=cell-pad*2;
+    ctx.fillStyle=i===0?"#65c98a":"#86dda0";roundRect(x,y,w,w,7);
+    if(i===0){
+      ctx.fillStyle="rgba(255,255,255,.35)";ctx.beginPath();ctx.arc(x+w*.28,y+w*.25,w*.12,0,Math.PI*2);ctx.fill();
+      drawEyes(x,y,w);
+    }
+  });
+  drawApple();
+}
+function drawEyes(x,y,w){
+  ctx.fillStyle="#304f3a";let a,b;
+  if(dir.x===1){a=[x+w*.72,y+w*.3];b=[x+w*.72,y+w*.68]}
+  else if(dir.x===-1){a=[x+w*.28,y+w*.3];b=[x+w*.28,y+w*.68]}
+  else if(dir.y===-1){a=[x+w*.3,y+w*.28];b=[x+w*.7,y+w*.28]}
+  else{a=[x+w*.3,y+w*.72];b=[x+w*.7,y+w*.72]}
+  [a,b].forEach(e=>{ctx.beginPath();ctx.arc(e[0],e[1],2.3,0,Math.PI*2);ctx.fill()});
+}
+function drawApple(){
+  if(!food || !cell || !Number.isFinite(cell))return;
+  const cx=food.x*cell+cell/2, cy=food.y*cell+cell/2;
+  const r=Math.max(7,cell*.34);
+
+  ctx.save();
+  ctx.shadowColor="rgba(255,70,95,.35)";
+  ctx.shadowBlur=Math.max(4,cell*.16);
+
+  ctx.fillStyle="#ff5f78";
+  ctx.beginPath();
+  ctx.arc(cx-r*.42,cy+r*.04,r*.66,0,Math.PI*2);
+  ctx.arc(cx+r*.42,cy+r*.04,r*.66,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.shadowBlur=0;
+  ctx.fillStyle="rgba(255,255,255,.65)";
+  ctx.beginPath();
+  ctx.arc(cx-r*.42,cy-r*.22,Math.max(1.5,r*.16),0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle="#76513e";
+  ctx.lineWidth=Math.max(1.5,cell*.07);
+  ctx.beginPath();
+  ctx.moveTo(cx,cy-r*.55);
+  ctx.lineTo(cx+cell*.05,cy-r*1.08);
+  ctx.stroke();
+
+  ctx.fillStyle="#58a96b";
+  ctx.beginPath();
+  ctx.ellipse(cx+cell*.18,cy-r*.9,r*.42,r*.2,-.45,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+document.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d"," "].includes(k))e.preventDefault();
+  if(k==="arrowup"||k==="w")change({x:0,y:-1});
+  else if(k==="arrowdown"||k==="s")change({x:0,y:1});
+  else if(k==="arrowleft"||k==="a")change({x:-1,y:0});
+  else if(k==="arrowright"||k==="d")change({x:1,y:0});
+  else if(k===" ")start();
+});
+document.querySelectorAll(".ctrl").forEach(b=>{
+  const act=e=>{e.preventDefault();const d=b.dataset.dir;
+    if(d==="up")change({x:0,y:-1});if(d==="down")change({x:0,y:1});
+    if(d==="left")change({x:-1,y:0});if(d==="right")change({x:1,y:0});
+  };
+  b.addEventListener("pointerdown",act);
+});
+restart.onclick=start;window.addEventListener("resize",resize);resize();start();
+</script>
+</body>
+</html>
